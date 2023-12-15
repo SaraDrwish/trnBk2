@@ -1,64 +1,218 @@
-const { User } = require("../models/user.model");
-const { paginate } = require("../utils/pagination");
-const { genUserId } = require("../utils/userIdGenerator");
-const bcrypt = require('bcrypt')
-const asyncHandler = require('express-async-handler');
-module.exports = {
-    getAllUsersCtrl: asyncHandler(async (req, res) => {
-        const { error, data, pagination } = await paginate(User, req);
-        if (error) return res.status(404).json({ success: false, error });
-        res.status(200).json({ success: true, pagination, data });
-    }),
-    getOneUserCtrl: asyncHandler(async (req, res) => {
-        const user = await User.findOne({ _id: req.params.id })
-        if (!user) return res.status(404).json({ success: false, error: "user not found." })
-        res.status(200).json({ success: true, data: user })
-    }),
-    createByAdminCtrl: asyncHandler(async (req, res) => {
-        const { userId, mobileNumber } = req.body
-        const existingUser = await User.findOne({ $or: [{ userId }, { mobileNumber }] })
-        if (existingUser) return res.status(400).json({ success: false, error: `This ${existingUser.userId === userId ? "userId" : "MobileNumber"} already in use ..!` })
-        let generatedUserId
-        if (userId) {
-            const user = await User.exists({ userId });
-            if (user) return res.status(400).json({ success: false, error: "userId already in use." });
-            generatedUserId = userId;
-        } else {
-            generatedUserId = await genUserId();
-        }
-        const newUser = new User({ ...req.body, userId: generatedUserId })
-        await newUser.save()
-        res.status(201).json({ success: true, data: newUser })
-    }),
-    updateByAdminCtrl: asyncHandler(async (req, res) => {
-        const { password, mobileNumber, userId } = req.body
-        let user = await User.findById(req.params.id);
-        if (!user) return res.status(404).json({ success: false, error: 'User not found' });
-        let existingUser = await User.findOne({ _id: { $ne: req.params.id }, $or: [{ userId }, { mobileNumber }] });
-        if (existingUser) return res.status(400).json({ success: false, error: `This ${existingUser.userId === userId ? "User ID" : "MobileNumber"} already in use ..!` })
-        if (password) {
-            const genSalt = await bcrypt.genSalt(10);
-            const hash = await bcrypt.hash(password, genSalt);
-            req.body.password = hash
-        }
-        const updatedUser = await User.findOneAndUpdate({ _id: req.params.id }, req.body, { new: true });
-        res.status(200).json({ success: true, data: updatedUser });
-    }),
-    updateUserProfileCtrl: asyncHandler(async (req, res) => {
-        console.log("req.file",req.file)
-        if (req.file) req.body.profileImage = `users/${req.file.filename}`
-        if (req.body.mobileNumber) {
-            const existingUser = await User.findOne({ _id: { $ne: req.user._id }, $or: [{ mobileNumber: req.body.mobileNumber }] });
-            if (existingUser) return res.status(400).json({ success: false, error: `This MobileNumber already in use ..!` })
-        }
-        const updatedUser = await User.findOneAndUpdate({ _id: req.user._id }, req.body, { new: true });
-        if (!updatedUser) return res.status(404).json({ success: false, error: "user not found." })
-        res.status(200).json({ success: true, data: updatedUser });
-    }),
-    deleteUserCtrl: asyncHandler(async (req, res) => {
-        const deletedUser = await User.findOneAndDelete({ _id: req.params.id });
-        if (!deletedUser) return res.status(404).json({ success: false, error: "user not found." })
-        res.status(200).json({ success: true, data: deletedUser._id });
-    }),
+// const { User } = require("../models/user.model");
+// const { paginate } = require("../utils/pagination");
+// const { genUserId } = require("../utils/userIdGenerator");
+// const bcrypt = require('bcrypt')
+// const asyncHandler = require('express-async-handler');
+// module.exports = {
+//     getAllUsersCtrl: asyncHandler(async (req, res) => {
+//         const { error, data, pagination } = await paginate(User, req);
+//         if (error) return res.status(404).json({ success: false, error });
+//         res.status(200).json({ success: true, pagination, data });
+//     }),
+//     getOneUserCtrl: asyncHandler(async (req, res) => {
+//         const user = await User.findOne({ _id: req.params.id })
+//         if (!user) return res.status(404).json({ success: false, error: "user not found." })
+//         res.status(200).json({ success: true, data: user })
+//     }),
+//     createByAdminCtrl: asyncHandler(async (req, res) => {
+//         const { userId, mobileNumber } = req.body
+//         const existingUser = await User.findOne({ $or: [{ userId }, { mobileNumber }] })
+//         if (existingUser) return res.status(400).json({ success: false, error: `This ${existingUser.userId === userId ? "userId" : "MobileNumber"} already in use ..!` })
+//         let generatedUserId
+//         if (userId) {
+//             const user = await User.exists({ userId });
+//             if (user) return res.status(400).json({ success: false, error: "userId already in use." });
+//             generatedUserId = userId;
+//         } else {
+//             generatedUserId = await genUserId();
+//         }
+//         const newUser = new User({ ...req.body, userId: generatedUserId })
+//         await newUser.save()
+//         res.status(201).json({ success: true, data: newUser })
+//     }),
+//     updateByAdminCtrl: asyncHandler(async (req, res) => {
+//         const { password, mobileNumber, userId } = req.body
+//         let user = await User.findById(req.params.id);
+//         if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+//         let existingUser = await User.findOne({ _id: { $ne: req.params.id }, $or: [{ userId }, { mobileNumber }] });
+//         if (existingUser) return res.status(400).json({ success: false, error: `This ${existingUser.userId === userId ? "User ID" : "MobileNumber"} already in use ..!` })
+//         if (password) {
+//             const genSalt = await bcrypt.genSalt(10);
+//             const hash = await bcrypt.hash(password, genSalt);
+//             req.body.password = hash
+//         }
+//         const updatedUser = await User.findOneAndUpdate({ _id: req.params.id }, req.body, { new: true });
+//         res.status(200).json({ success: true, data: updatedUser });
+//     }),
+//     updateUserProfileCtrl: asyncHandler(async (req, res) => {
+//         console.log("req.file",req.file)
+//         if (req.file) req.body.profileImage = `users/${req.file.filename}`
+//         if (req.body.mobileNumber) {
+//             const existingUser = await User.findOne({ _id: { $ne: req.user._id }, $or: [{ mobileNumber: req.body.mobileNumber }] });
+//             if (existingUser) return res.status(400).json({ success: false, error: `This MobileNumber already in use ..!` })
+//         }
+//         const updatedUser = await User.findOneAndUpdate({ _id: req.user._id }, req.body, { new: true });
+//         if (!updatedUser) return res.status(404).json({ success: false, error: "user not found." })
+//         res.status(200).json({ success: true, data: updatedUser });
+//     }),
+//     deleteUserCtrl: asyncHandler(async (req, res) => {
+//         const deletedUser = await User.findOneAndDelete({ _id: req.params.id });
+//         if (!deletedUser) return res.status(404).json({ success: false, error: "user not found." })
+//         res.status(200).json({ success: true, data: deletedUser._id });
+//     }),
 
-}
+// }
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// const express = require("express");
+// const UserPaperModel = require("../models/userPaperModel");
+
+// class UserPapersController {
+//   getAllUserPapers(req, res) {
+//     // Mock data for demonstration, replace with actual data retrieval logic
+//     const userPapers = [
+//       new UserPaperModel(1, "Document 1", "valid", "2023-01-01", "2023-01-02", [
+//         "view",
+//         "edit",
+//       ]),
+//       new UserPaperModel(
+//         2,
+//         "Document 2",
+//         "not valid",
+//         "2023-02-01",
+//         "2023-02-02",
+//         ["upload"]
+//       ),
+//     ];
+
+//     res.json(userPapers);
+//   }
+
+//   addNewUserPaper(req, res) {
+//     const { id, document, uploadDate, lastModifiedDate } = req.body;
+//     const newUserPaper = new UserPaperModel(
+//       id,
+//       document,
+//       "not valid",
+//       uploadDate,
+//       lastModifiedDate,
+//       ["upload"]
+//     );
+//     console.log("New User Paper:", newUserPaper);
+
+//     res.json(newUserPaper);
+//   }
+
+//   updateUserPaperStatus(req, res) {
+//     const { id } = req.params;
+//     const { status } = req.body;
+
+//     console.log(`Updating User Paper ${id} Status to ${status}`);
+
+//     res.json({ message: `User Paper ${id} status updated to ${status}` });
+//   }
+// }
+
+// module.exports = new UserPapersController();
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+const User = require("../models/user.model");
+const bcrypt = require("bcrypt");
+const asyncHandler = require("express-async-handler");
+
+const UserController = {
+  getAllUsersCtrl: asyncHandler(async (req, res) => {
+    const users = await User.find();
+    res.status(200).json({ success: true, data: users });
+  }),
+
+  getOneUserCtrl: asyncHandler(async (req, res) => {
+    const user = await User.findOne({ _id: req.params.id });
+    if (!user)
+      return res.status(404).json({ success: false, error: "User not found." });
+    res.status(200).json({ success: true, data: user });
+  }),
+
+  createByAdminCtrl: asyncHandler(async (req, res) => {
+    const { userId, mobileNumber } = req.body;
+    const existingUser = await User.findOne({
+      $or: [{ userId }, { mobileNumber }],
+    });
+    if (existingUser)
+      return res.status(400).json({
+        success: false,
+        error: `This ${
+          existingUser.userId === userId ? "userId" : "MobileNumber"
+        } already in use.`,
+      });
+
+    let generatedUserId = userId ? userId : await genUserId();
+    const newUser = new User({ ...req.body, userId: generatedUserId });
+    await newUser.save();
+    res.status(201).json({ success: true, data: newUser });
+  }),
+
+  updateByAdminCtrl: asyncHandler(async (req, res) => {
+    const { password, mobileNumber, userId } = req.body;
+    let user = await User.findById(req.params.id);
+    if (!user)
+      return res.status(404).json({ success: false, error: "User not found" });
+
+    let existingUser = await User.findOne({
+      _id: { $ne: req.params.id },
+      $or: [{ userId }, { mobileNumber }],
+    });
+    if (existingUser)
+      return res.status(400).json({
+        success: false,
+        error: `This ${
+          existingUser.userId === userId ? "User ID" : "MobileNumber"
+        } already in use.`,
+      });
+
+    if (password) {
+      const genSalt = await bcrypt.genSalt(10);
+      const hash = await bcrypt.hash(password, genSalt);
+      req.body.password = hash;
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
+    res.status(200).json({ success: true, data: updatedUser });
+  }),
+
+  updateUserProfileCtrl: asyncHandler(async (req, res) => {
+    if (req.file) req.body.profileImage = `users/${req.file.filename}`;
+
+    if (req.body.mobileNumber) {
+      const existingUser = await User.findOne({
+        _id: { $ne: req.user._id },
+        mobileNumber: req.body.mobileNumber,
+      });
+      if (existingUser)
+        return res
+          .status(400)
+          .json({ success: false, error: `This MobileNumber already in use.` });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(req.user._id, req.body, {
+      new: true,
+    });
+    if (!updatedUser)
+      return res.status(404).json({ success: false, error: "User not found." });
+
+    res.status(200).json({ success: true, data: updatedUser });
+  }),
+
+  deleteUserCtrl: asyncHandler(async (req, res) => {
+    const deletedUser = await User.findByIdAndDelete(req.params.id);
+    if (!deletedUser)
+      return res.status(404).json({ success: false, error: "User not found." });
+    res.status(200).json({ success: true, data: deletedUser._id });
+  }),
+};
+
+module.exports = UserController;

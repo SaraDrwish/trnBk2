@@ -32,15 +32,13 @@ app.use(errorHandler);
 module.exports = app;
 
 // //////////////////////////////////////////
-const customerPapersRoutes = require("./routes/customerPapersRoutes");
-const userPapersRoutes = require("./routes/userPapersRoutes");
-const customerPapersRoutes = require("./routes/customerPapersRoutes");
-const userPapersRoutes = require("./routes/userPapersRoutes");
 
 const port = 3000;
 
-app.use("/customerPapers", customerPapersRoutes);
-app.use("/userPapers", userPapersRoutes);
+const customerPapersRoutes = require("./routes/customerPapersRoutes");
+const userPapersRoutes = require("./routes/userPapersRoutes");
+
+app.use(express.json());
 app.use("/customerPapers", customerPapersRoutes);
 app.use("/userPapers", userPapersRoutes);
 
