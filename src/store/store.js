@@ -11,9 +11,12 @@ import userReducer from "./reducers/userSlice";
 import globalReducer from "./reducers/globalSlice";
 import adminReducer from "./reducers/adminSlice";
 import papersReducer from "./reducers/papersSlice";
+import userReducer from "./reducers/userSlice";
+import papersReducer from "./reducers/papersSlice";
 
 const store = configureStore({
   reducer: {
+    customer: customerReducer,
     user: userReducer,
     global: globalReducer,
     admin: adminReducer,
