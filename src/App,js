@@ -1,0 +1,19 @@
+import React from 'react';
+import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
+import UserList from './components/UserList';
+import CustomerPage from './components/CustomerPage';
+import CustomerProviderPage from './components/CustomerProviderPage';
+
+const App = () => {
+  return (
+    <Router>
+      <Switch>
+        <Route path="/users" component={UserList} />
+        <Route path="/customers" component={CustomerPage} />
+        <Route path="/customer-providers" component={CustomerProviderPage} />
+      </Switch>
+    </Router>
+  );
+};
+
+export default App;
